@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mapa Interativo com Info</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css" />
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+    <h2>Mapa Interativo</h2>
+    <div id="map"></div>
+
+    <div id="barra-categorias">
+        <button id="btnAlertas">Alertas</button>
+        <button id="btnBarcos">Navios</button>
+        <button id="btnFundeadores">Fundeadouros</button>
+        <button id="btnTerminaisCarga">Terminais por Carga</button>
+        <button id="btnTerminais">Terminais por Estado</button>
+        <button id="btnTodos">Todos</button>
+    </div>
+
+
+    <div id="sidebar-legenda">
+        <h3 id="legenda-titulo">Legenda</h3>
+        <ul id="legenda-itens"></ul>
+    </div>
+
+    <!-- <div id="filtro">
+
+        <button id="btnToggleFiltro">🔽 Filtros</button>
+
+        <div id="filtro-conteudo" class="fechado">
+
+            <h3>Filtrar por tipo:</h3>
+
+            <div class="filtro-item">
+                <input type="checkbox" id="check-marker" checked>
+                <label for="check-marker">Ponto</label>
+            </div>
+
+            <div class="filtro-item">
+                <input type="checkbox" id="check-polygon" checked>
+                <label for="check-polygon">Polígono</label>
+            </div>
+
+            <div class="filtro-item">
+                <input type="checkbox" id="check-polyline" checked>
+                <label for="check-polyline">Linha</label>
+            </div>
+
+            <div class="filtro-item">
+                <input type="checkbox" id="check-rectangle" checked>
+                <label for="check-rectangle">Retângulo</label>
+            </div>
+
+            <div class="filtro-item">
+                <input type="checkbox" id="check-circle" checked>
+                <label for="check-circle">Círculo</label>
+            </div>
+
+            <button id="btnFiltrar">Filtrar por tipo</button> -->
+
+            <!-- <h3>Filtrar por categoria:</h3>
+
+            <div class="filtro-item">
+                <input type="radio" id="cat-terminal" name="categoria" value="terminal">
+                <label for="cat-terminal">Terminais</label>
+            </div>
+
+            <div class="filtro-item">
+                <input type="radio" id="cat-fundeadouro" name="categoria" value="fundeadouro">
+                <label for="cat-fundeadouro">Fundeadouros</label>
+            </div>
+
+            <div class="filtro-item">
+                <input type="radio" id="cat-todos" name="categoria" value="todos" checked>
+                <label for="cat-todos">Todos</label>
+            </div> -->
+
+            <!-- <button id="btnFiltrarCategoria">Filtrar por categoria</button> -->
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
+    <script src="mapa.js"></script>
+</body>
+</html>
