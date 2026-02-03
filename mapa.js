@@ -27,10 +27,21 @@ const coresBarcos = {
 }
 
 const coresAlerta = {
-    baixo: '#FFD966',
-    atencao: '#FFA500',
-    critico: '#FF0000',
+    mare_baixa_altorisco: '#FF0000',
+    mare_baixa_baixorisco: '#FFA500',
+    autorizacao_pendente: '#FF0000',
+    limpeza_programada: '#FFA500'            
+
 };
+
+const alertaIcons = {
+    mare_baixa_altorisco: L.icon({ iconUrl: 'public/arq/icons/danger_red.png', iconSize: [25, 25] }),
+    mare_baixa_baixorisco: L.icon({ iconUrl: 'public/arq/icons/danger_orange.png', iconSize: [25, 25] }),
+    autorizacao_pendente: L.icon({ iconUrl: 'public/arq/icons/danger_red.png', iconSize: [25, 25] }),
+    limpeza_programada: L.icon({ iconUrl: 'public/arq/icons/info.png', iconSize: [25, 25] }),
+    // default: L.icon({ iconUrl: 'public/arq/icons/default_alert.png', iconSize: [25, 25] }) // fallback
+};
+
 
 
 let filtroAtual = {
@@ -153,14 +164,10 @@ function atualizarCorAlerta(layer) {
     layer.info.cor = cor;
 }
 
-const alertaIcon = L.icon({
-    iconUrl: 'public/arq/icons/danger_orange.png',
-    iconSize: [28, 28],
-    iconAnchor: [14, 14]
-});
 
 function adicionarIconeAlerta(layer) {
-    if (!layer.info.alerta) return;
+    const tipoAlerta = layer.info.alerta;
+    if (!tipoAlerta) return;
 
     const centro =
         layer.getLatLng?.() ||
@@ -168,11 +175,27 @@ function adicionarIconeAlerta(layer) {
 
     if (!centro) return;
 
-    L.marker(centro, {
-        icon: alertaIcon,
+    const icon = alertaIcons[tipoAlerta];
+
+    const marker = L.marker(centro, {
+        icon: icon,
         interactive: false
-    }).addTo(map);
+    });
+
+    drawnItems.addLayer(marker); 
 }
+
+function formatarAlerta(alerta) {
+    const textos = {
+        mare_baixa_altorisco: 'Maré baixa (alto risco)',
+        mare_baixa_baixorisco: 'Maré baixa (baixo risco)',
+        autorizacao_pendente: 'Autorização pendente',
+        limpeza_programada: 'Limpeza programada'
+    };
+
+    return textos[alerta] || alerta;
+}
+
 
 
 
@@ -371,53 +394,80 @@ function atualizarPopup(layer) {
     let estado = layer.info?.estado_ocupacao || "normal";
     let tipo_carga = layer.info?.tipo_carga || "Sem tipo de carga";
     let estado_barco = layer.info?.estado_barco || "Sem estado de barco";
+    let alerta = layer.info?.alerta || null;
 
-    console.log("Categoria:", categoria);
-    console.log("Info completa:", layer.info);
+    let alertaHTML = '';
+    if (filtroAtual.modo === 'alerta' && categoria === 'terminal' && alerta) {
+        alertaHTML = `
+            <div class="popup-alerta">
+                <strong>Alerta:</strong> ${formatarAlerta(alerta)}
+            </div>
+        `;
+    }
+
+    let mostrarBotoes = !(filtroAtual.modo === 'alerta' && alerta);
+    let botoesHTML = '';
+
+    if (mostrarBotoes) {
+        botoesHTML = `
+            <div class="popup-botoes">
+                <button class="popup-btn popup-btn-editar"
+                    onclick="editarInfo('${layer._leaflet_id}')">Editar</button>
+                <button class="popup-btn popup-btn-apagar"
+                    onclick="apagarDesenho('${layer._leaflet_id}')">Apagar</button>
+            </div>
+        `;
+    } else {
+        botoesHTML = `
+            <div class="popup-info">
+                Ações desativadas durante alerta
+            </div>
+        `;
+    }
 
     if (categoria === 'fundeadouro') {
         let conteudo = `
             <div class="popup-container">
-                <div class="popup-titulo"> ${nome}</div>
+                <div class="popup-titulo">${nome}</div>
                 <div class="popup-categoria">Categoria: ${categoria}</div>
                 <div class="popup-estado">Estado: ${estado}</div>
-                <div class="popup-botoes">
-                    <button class="popup-btn popup-btn-editar" onclick="editarInfo('${layer._leaflet_id}')">Editar</button>
-                    <button class="popup-btn popup-btn-apagar" onclick="apagarDesenho('${layer._leaflet_id}')">Apagar</button>
-                </div>
+
+                ${alertaHTML}
+                ${botoesHTML}
             </div>
-            `;
-            layer.bindPopup(conteudo);
+        `;
+        layer.bindPopup(conteudo);
+
     } else if (categoria === 'terminal') {
         let conteudo = `
             <div class="popup-container">
-                <div class="popup-titulo"> ${nome}</div>
+                <div class="popup-titulo">${nome}</div>
                 <div class="popup-categoria">Categoria: ${categoria}</div>
                 <div class="popup-estado">Estado: ${estado}</div>
                 <div class="popup-tipo-carga">Tipo de carga: ${tipo_carga}</div>
-                <div class="popup-botoes">
-                    <button class="popup-btn popup-btn-editar" onclick="editarInfo('${layer._leaflet_id}')">Editar</button>
-                    <button class="popup-btn popup-btn-apagar" onclick="apagarDesenho('${layer._leaflet_id}')">Apagar</button>
-                </div>
+
+                ${alertaHTML}
+                ${botoesHTML}
             </div>
-    `;
-    layer.bindPopup(conteudo);
+        `;
+        layer.bindPopup(conteudo);
+
     } else {
-            let conteudo = `
-                <div class="popup-container">
-                    <div class="popup-titulo">${nome}</div>
-                    <div class="popup-categoria">Categoria: ${categoria}</div>
-                    <div class="popup-estado">Estado: ${estado_barco}</div>
-                    <div class="popup-botoes">
-                        <button class="popup-btn popup-btn-editar" onclick="editarInfo('${layer._leaflet_id}')">Editar</button>
-                        <button class="popup-btn popup-btn-apagar" onclick="apagarDesenho('${layer._leaflet_id}')">Apagar</button>
-                    </div>
-                </div>
-            `;
-            layer.bindPopup(conteudo);
-        
+        let conteudo = `
+            <div class="popup-container">
+                <div class="popup-titulo">${nome}</div>
+                <div class="popup-categoria">Categoria: ${categoria}</div>
+                <div class="popup-estado">Estado: ${estado_barco}</div>
+
+                ${alertaHTML}
+                ${botoesHTML}
+            </div>
+        `;
+        layer.bindPopup(conteudo);
     }
 }
+
+
 
 map.on('draw:edited', function(e) {
     e.layers.eachLayer(function(layer) {
@@ -434,88 +484,104 @@ drawnItems.on('click', function(e){
 
 function editarInfo(id) {
     var layer = drawnItems.getLayer(id);
-    if (layer.info.categoria === 'fundeadouro') {
-        if (layer) {
-        layer.info.nome = prompt("Atualize o nome:", layer.info.nome);
+    if (!layer) return;
 
-        const estadosValidos = ['normal', 'atencao', 'critico', 'indisponivel'];
-        let novoEstado = prompt("Atualize o estado de ocupação (normal/atencao/critico/indisponivel):", layer.info.estado_ocupacao || 'normal');
-
-        while (!estadosValidos.includes(novoEstado)) {
-            novoEstado = prompt(`Estado inválido! Escolha um válido: ${estadosValidos.join(', ')}`, layer.info.estado_ocupacao || 'normal');
-        }
-        layer.info.estado_ocupacao = novoEstado;
-
-        if (filtroAtual.categoria === 'todos') {
-            layer.setStyle({ color: '#808080', fillColor: '#808080', fillOpacity: 0.1 });
-            layer.info.cor = '#808080';
-        } else {
-            atualizarCorPorEstado(layer);
-        }
-
-        atualizarPopup(layer);
-        layer.openPopup();
-
-        atualizarDesenho(layer);
+    const novoNome = prompt("Atualize o nome:", layer.info.nome);
+    if (novoNome !== null) { 
+        layer.info.nome = novoNome;
+    } else {
+        layer.closePopup();
+        return; 
     }
-    } else if (layer.info.categoria === 'terminal') {
-        if (layer) {
-        layer.info.nome = prompt("Atualize o nome:", layer.info.nome);
 
+    if (layer.info.categoria === 'fundeadouro') {
         const estadosValidos = ['normal', 'atencao', 'critico', 'indisponivel'];
-        let novoEstado = prompt("Atualize o estado de ocupação (normal/atencao/critico/indisponivel):", layer.info.estado_ocupacao || 'normal');
+        let novoEstado = prompt(
+            "Atualize o estado de ocupação (normal/atencao/critico/indisponivel):",
+            layer.info.estado_ocupacao || 'normal'
+        );
+        if (novoEstado === null) { layer.closePopup(); return; } // cancelar
 
         while (!estadosValidos.includes(novoEstado)) {
-            novoEstado = prompt(`Estado inválido! Escolha um válido: ${estadosValidos.join(', ')}`, layer.info.estado_ocupacao || 'normal');
+            novoEstado = prompt(
+                `Estado inválido! Escolha um válido: ${estadosValidos.join(', ')}`,
+                layer.info.estado_ocupacao || 'normal'
+            );
+            if (novoEstado === null) { layer.closePopup(); return; } // cancelar
         }
         layer.info.estado_ocupacao = novoEstado;
 
-        const tiposValidos = ['Multiproposito', 'GraneisLiquido_QuimicosCombustiveis', 'CargaGeral_Conteineres', 'GraneisLiquido_SucosCitricos', 'GraneisSolidos_Vegetais', 'CargaGeral_Celulose', 'Passageiros', 'GraneisSolidos_Minerais', 'CargaGeral_Veiculos'];
-        let novoTipoCarga = prompt("Atualize o tipo de carga: Multiproposito, GraneisLiquido_QuimicosCombustiveis, CargaGeral_Conteineres, GraneisLiquido_SucosCitricos, GraneisSolidos_Vegetais, CargaGeral_Celulose, Passageiros, GraneisSolidos_Minerais, CargaGeral_Veiculos", layer.info.tipo_carga || '');
+    } else if (layer.info.categoria === 'terminal') {
+        const estadosValidos = ['normal', 'atencao', 'critico', 'indisponivel'];
+        let novoEstado = prompt(
+            "Atualize o estado de ocupação (normal/atencao/critico/indisponivel):",
+            layer.info.estado_ocupacao || 'normal'
+        );
+        if (novoEstado === null) { layer.closePopup(); return; } // cancelar
+
+        while (!estadosValidos.includes(novoEstado)) {
+            novoEstado = prompt(
+                `Estado inválido! Escolha um válido: ${estadosValidos.join(', ')}`,
+                layer.info.estado_ocupacao || 'normal'
+            );
+            if (novoEstado === null) { layer.closePopup(); return; } // cancelar
+        }
+        layer.info.estado_ocupacao = novoEstado;
+
+        const tiposValidos = [
+            'Multiproposito', 'GraneisLiquido_QuimicosCombustiveis', 'CargaGeral_Conteineres',
+            'GraneisLiquido_SucosCitricos', 'GraneisSolidos_Vegetais', 'CargaGeral_Celulose',
+            'Passageiros', 'GraneisSolidos_Minerais', 'CargaGeral_Veiculos'
+        ];
+        let novoTipoCarga = prompt(
+            "Atualize o tipo de carga:",
+            layer.info.tipo_carga || ''
+        );
+        if (novoTipoCarga === null) { layer.closePopup(); return; } // cancelar
 
         while (!tiposValidos.includes(novoTipoCarga)) {
-            novoTipoCarga = prompt(`Tipo de carga inválido! Escolha um válido: ${tiposValidos.join(', ')}`, layer.info.tipo_carga || '');
+            novoTipoCarga = prompt(
+                `Tipo de carga inválido! Escolha um válido: ${tiposValidos.join(', ')}`,
+                layer.info.tipo_carga || ''
+            );
+            if (novoTipoCarga === null) { layer.closePopup(); return; } // cancelar
         }
-
         layer.info.tipo_carga = novoTipoCarga;
 
-        if (filtroAtual.categoria === 'todos') {
-            layer.setStyle({ color: '#808080', fillColor: '#808080', fillOpacity: 0.1 });
-            layer.info.cor = '#808080';
-        } else {
-            atualizarCorPorEstado(layer);
-        }
-
-        atualizarPopup(layer);
-        layer.openPopup();
-
-        atualizarDesenho(layer);
-    }
     } else if (layer.info.categoria === 'navio') {
-        if (layer) {
-        layer.info.nome = prompt("Atualize o nome:", layer.info.nome);
-
         const estadoBarcoValidos = ['atracado', 'saida', 'manobra', 'fundeado'];
-        let novoEstadoBarco = prompt("Atualize o estado do navio (atracado/saida/manobra/fundeado):", layer.info.estado_barco || '');
+        let novoEstadoBarco = prompt(
+            "Atualize o estado do navio (atracado/saida/manobra/fundeado):",
+            layer.info.estado_barco || ''
+        );
+        if (novoEstadoBarco === null) { layer.closePopup(); return; } // cancelar
 
         while (!estadoBarcoValidos.includes(novoEstadoBarco)) {
-            novoEstadoBarco = prompt(`Estado inválido! Escolha um válido: ${estadoBarcoValidos.join(', ')}`, layer.info.estado_barco || '');
+            novoEstadoBarco = prompt(
+                `Estado inválido! Escolha um válido: ${estadoBarcoValidos.join(', ')}`,
+                layer.info.estado_barco || ''
+            );
+            if (novoEstadoBarco === null) { layer.closePopup(); return; } // cancelar
         }
         layer.info.estado_barco = novoEstadoBarco;
-        if (filtroAtual.categoria === 'todos') {
-            layer.setStyle({ color: '#808080', fillColor: '#808080', fillOpacity: 0.1 });
-            layer.info.cor = '#808080';
-        } else {
-            atualizarCorBarco(layer);
-        }
-
-        atualizarPopup(layer);
-        layer.openPopup();
-
-        atualizarDesenho(layer);
-        }
     }
+
+    if (filtroAtual.categoria === 'terminal' && filtroAtual.modo === 'carga') {
+        atualizarCorPorCarga(layer);
+    } else if (filtroAtual.categoria === 'navio') {
+        atualizarCorBarco(layer);
+    } else if (filtroAtual.categoria === 'terminal' && filtroAtual.modo === 'alerta') {
+        atualizarCorAlerta(layer);
+    } else {
+        atualizarCorPorEstado(layer);
+    }
+
+    atualizarPopup(layer);
+    layer.openPopup();
+    atualizarDesenho(layer);
 }
+
+
 
 
 function apagarDesenho(id) {
@@ -895,6 +961,10 @@ function atualizarLegenda() {
         Object.entries(coresEstado).forEach(([estado, cor]) => {
             const li = document.createElement('li');
             li.innerHTML = `<div class="legenda-cor" style="background-color: ${cor}"></div> ${estado}`;
+
+            li.onmouseenter = () => highlightEstado(estado);
+            li.onmouseleave = () => resetHighlightEstado();
+
             lista.appendChild(li);
         });
 
@@ -904,6 +974,10 @@ function atualizarLegenda() {
         Object.entries(coresTipoCarga).forEach(([tipo, cor]) => {
             const li = document.createElement('li');
             li.innerHTML = `<div class="legenda-cor" style="background-color: ${cor}"></div> ${tipo.replace(/_/g,' ').replace(/\//g,' / ')}`;
+
+            li.onmouseenter = () => highlightCarga(tipo);
+            li.onmouseleave = () => resetHighlightCarga();
+
             lista.appendChild(li);
         });
     } else if (filtroAtual.categoria === 'navio') {
@@ -912,13 +986,203 @@ function atualizarLegenda() {
         Object.entries(coresBarcos).forEach(([estado, cor]) => {
             const li = document.createElement('li');
             li.innerHTML = `<div class="legenda-cor" style="background-color: ${cor}"></div> ${estado}`;
+
+            li.onmouseenter = () => highlightBarco(estado);
+            li.onmouseleave = () => resetHighlightBarco();
+
             lista.appendChild(li);
         });
+    } else if (filtroAtual.modo === 'alerta') {
+    titulo.textContent = "Alertas";
+
+    Object.entries(coresAlerta).forEach(([alerta, cor]) => {
+        const li = document.createElement('li');
+
+        li.innerHTML = `
+            <div class="legenda-cor" style="background-color:${cor}"></div>
+            ${formatarAlerta(alerta)}
+        `;
+
+        li.onmouseenter = () => highlightAlerta(alerta);
+        li.onmouseleave = () => resetHighlightAlerta();
+
+        lista.appendChild(li);
+    });
     } else {
-        titulo.textContent = "Legenda";
+        titulo.textContent = "";
         lista.innerHTML = '';
     }
 }
+
+function highlightAlerta(alertaSelecionado) {
+    drawnItems.eachLayer(layer => {
+        if (!layer.info || layer.info.categoria !== 'terminal') return;
+
+        if (layer.info.alerta === alertaSelecionado) {
+            layer.setStyle?.({
+                weight: 5,
+                fillOpacity: 0.5
+            });
+
+            layer.bringToFront?.();
+        } else {
+            layer.setStyle?.({
+                opacity: 0.2,
+                fillOpacity: 0.05
+            });
+        }
+    });
+}
+
+function resetHighlightAlerta() {
+    drawnItems.eachLayer(layer => {
+        if (!layer.info || layer.info.categoria !== 'terminal') return;
+        if (!layer.setStyle) return;
+
+        layer.setStyle({
+            opacity: 1,
+            fillOpacity: filtroAtual.modo === 'alerta' ? 0.25 : 0.1,
+            weight: 3
+        });
+
+        if (filtroAtual.modo === 'alerta') {
+            atualizarCorAlerta(layer);
+
+        } else if (filtroAtual.categoria === 'terminal' && filtroAtual.modo === 'carga') {
+            atualizarCorPorCarga(layer);
+
+        } else if (filtroAtual.categoria === 'navio') {
+            atualizarCorBarco(layer);
+
+        } else {
+            atualizarCorPorEstado(layer);
+        }
+    });
+}
+
+function highlightEstado(estadoSelecionado) {
+    drawnItems.eachLayer(layer => {
+        if (!layer.info) return;
+
+        if (layer.info.categoria !== 'terminal' && layer.info.categoria !== 'fundeadouro') return;
+
+        if (layer.info.estado_ocupacao === estadoSelecionado) {
+            layer.setStyle?.({
+                weight: 5,
+                fillOpacity: 0.5
+            });
+            layer.bringToFront?.();
+        } else {
+            layer.setStyle?.({
+                opacity: 0.2,
+                fillOpacity: 0.05
+            });
+        }
+    });
+}
+
+function resetHighlightEstado() {
+    drawnItems.eachLayer(layer => {
+        if (!layer.info) return;
+        if (!layer.setStyle) return;
+
+        layer.setStyle({
+            opacity: 1,
+            fillOpacity: filtroAtual.modo === 'estado' ? 0.25 : 0.1,
+            weight: 3
+        });
+
+        if (filtroAtual.modo === 'alerta') {
+            atualizarCorAlerta(layer);
+        } else if (filtroAtual.categoria === 'terminal' && filtroAtual.modo === 'carga') {
+            atualizarCorPorCarga(layer);
+        } else if (filtroAtual.categoria === 'navio') {
+            atualizarCorBarco(layer);
+        } else {
+            atualizarCorPorEstado(layer);
+        }
+    });
+}
+
+function highlightCarga(tipoCargaSelecionado) {
+    drawnItems.eachLayer(layer => {
+        if (!layer.info) return;
+        if (layer.info.categoria !== 'terminal') return;
+
+        if (layer.info.tipo_carga === tipoCargaSelecionado) {
+            layer.setStyle?.({
+                weight: 5,
+                fillOpacity: 0.5
+            });
+            layer.bringToFront?.();
+        } else {
+            layer.setStyle?.({
+                opacity: 0.2,
+                fillOpacity: 0.05
+            });
+        }
+    });
+}
+
+function resetHighlightCarga() {
+    drawnItems.eachLayer(layer => {
+        if (!layer.info) return;
+        if (!layer.setStyle) return;
+
+        layer.setStyle({
+            opacity: 1,
+            fillOpacity: filtroAtual.modo === 'carga' ? 0.25 : 0.1,
+            weight: 3
+        });
+
+        if (filtroAtual.modo === 'alerta') {
+            atualizarCorAlerta(layer);
+        } else if (filtroAtual.categoria === 'terminal' && filtroAtual.modo === 'carga') {
+            atualizarCorPorCarga(layer);
+        } else if (filtroAtual.categoria === 'navio') {
+            atualizarCorBarco(layer);
+        } else {
+            atualizarCorPorEstado(layer);
+        }
+    });
+}
+
+function highlightBarco(estadoSelecionado) {
+    drawnItems.eachLayer(layer => {
+        if (!layer.info || layer.info.categoria !== 'navio') return;
+
+        if (layer.info.estado_barco === estadoSelecionado) {
+            layer.setStyle?.({
+                weight: 5,
+                fillOpacity: 0.5
+            });
+            layer.bringToFront?.();
+        } else {
+            layer.setStyle?.({
+                opacity: 0.2,
+                fillOpacity: 0.05
+            });
+        }
+    });
+}
+
+function resetHighlightBarco() {
+    drawnItems.eachLayer(layer => {
+        if (!layer.info || layer.info.categoria !== 'navio') return;
+        if (!layer.setStyle) return;
+
+        layer.setStyle({
+            opacity: 1,
+            fillOpacity: 0.1,
+            weight: 3
+        });
+
+        atualizarCorBarco(layer);
+    });
+}
+
+
+
 
 
 function setActiveButton(clickedBtn) {

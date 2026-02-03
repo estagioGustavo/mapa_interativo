@@ -79,6 +79,44 @@ body {
     box-shadow: 0 2px 8px rgba(244, 67, 54, 0.3);
 }
 
+.popup-alerta {
+    margin-top: 6px;
+    padding: 6px;
+    background: #fff1f1;
+    border-left: 4px solid #ff4d4d;
+    font-weight: bold;
+}
+
+.popup-info {
+    margin-top: 8px;
+    padding: 6px;
+    background: #f5f5f5;
+    border-left: 4px solid #999;
+    font-weight: bold;
+    font-size: 13px;
+}
+
+#legenda-itens li {
+    cursor: pointer;
+}
+
+#legenda-itens li:hover {
+    background: rgba(0,0,0,0.05);
+}
+
+.legenda-sublista {
+    margin: 5px 0 0 20px;
+    padding: 0;
+    font-size: 12px;
+}
+
+.legenda-sublista li {
+    list-style: disc;
+    cursor: pointer;
+}
+
+
+
 #filtro {
     position: absolute;
     top: 5px;
