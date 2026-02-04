@@ -6,7 +6,7 @@ router.get('/', async (req, res) => {
   try {
     const connection = await pool.getConnection();
     const [desenhos] = await connection.query(
-      'SELECT id, nome, descricao, tipo, geojson, cor, categoria, estado_ocupacao, tipo_carga, estado_barco, data_criacao FROM desenhos ORDER BY data_atualizacao DESC'
+      'SELECT id, nome, descricao, tipo, geojson, cor, categoria, estado_ocupacao, tipo_carga, estado_barco, imo, local, fundeadouro_id, data_criacao FROM desenhos ORDER BY data_atualizacao DESC'
     );
     connection.release();
     
@@ -38,7 +38,7 @@ router.get('/filtro', async (req, res) => {
     
     const connection = await pool.getConnection();
     const [desenhos] = await connection.query(
-      `SELECT id, nome, descricao, tipo, geojson, cor, categoria, estado_ocupacao, tipo_carga, estado_barco, data_criacao FROM desenhos WHERE tipo IN (${placeholders}) ORDER BY data_atualizacao DESC`,
+      `SELECT id, nome, descricao, tipo, geojson, cor, categoria, estado_ocupacao, tipo_carga, estado_barco, imo, local, fundeadouro_id, data_criacao FROM desenhos WHERE tipo IN (${placeholders}) ORDER BY data_atualizacao DESC`,
       tipoArray
     );
     connection.release();
@@ -55,13 +55,95 @@ router.get('/filtro', async (req, res) => {
   }
 });
 
+router.get('/fundeadouros-navios', async (req, res) => {
+  let connection;
+
+  try {
+    connection = await pool.getConnection();
+
+    const [rows] = await connection.query(`
+      SELECT
+        f.id              AS fund_id,
+        f.nome            AS fund_nome,
+        f.descricao       AS fund_descricao,
+        f.tipo            AS fund_tipo,
+        f.geojson         AS fund_geojson,
+        f.cor             AS fund_cor,
+        f.categoria       AS fund_categoria,
+        f.estado_ocupacao AS fund_estado,
+        f.data_criacao    AS fund_data,
+
+        n.id              AS navio_id,
+        n.nome            AS navio_nome,
+        n.tipo            AS navio_tipo,
+        n.geojson         AS navio_geojson,
+        n.estado_barco    AS navio_estado,
+        n.imo             AS navio_imo,
+        n.local           AS navio_local
+      FROM desenhos f
+      LEFT JOIN desenhos n
+        ON n.fundeadouro_id = f.id
+       AND n.categoria = 'navio'
+       AND n.estado_barco = 'fundeado'
+      WHERE f.categoria = 'fundeadouro'
+      ORDER BY f.id, n.id
+    `);
+
+    const mapa = {};
+
+    rows.forEach(r => {
+      if (!mapa[r.fund_id]) {
+        mapa[r.fund_id] = {
+          id: r.fund_id,
+          nome: r.fund_nome,
+          descricao: r.fund_descricao,
+          tipo: r.fund_tipo,
+          categoria: r.fund_categoria,
+          estado_ocupacao: r.fund_estado,
+          cor: r.fund_cor,
+          data_criacao: r.fund_data,
+          geojson: JSON.parse(r.fund_geojson),
+          navios: []
+        };
+      }
+
+      if (r.navio_id) {
+        mapa[r.fund_id].navios.push({
+          id: r.navio_id,
+          nome: r.navio_nome,
+          tipo: r.navio_tipo,
+          categoria: 'navio',
+          estado_barco: r.navio_estado,
+          imo: r.navio_imo,
+          local: r.navio_local,
+          geojson: JSON.parse(r.navio_geojson)
+        });
+      }
+    });
+
+    res.json({
+      status: 'sucesso',
+      dados: Object.values(mapa)
+    });
+
+  } catch (error) {
+    console.error('Erro ao obter fundeadouros com navios:', error);
+    res.status(500).json({
+      status: 'erro',
+      mensagem: error.message
+    });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const connection = await pool.getConnection();
     
     const [desenhos] = await connection.query(
-      'SELECT id, nome, descricao, tipo, geojson, cor, categoria, estado_ocupacao, tipo_carga, estado_barco, data_criacao FROM desenhos WHERE id = ?',
+      'SELECT id, nome, descricao, tipo, geojson, cor, categoria, estado_ocupacao, tipo_carga, estado_barco, imo, local, fundeadouro_id, data_criacao FROM desenhos WHERE id = ?',
       [id]
     );
     connection.release();

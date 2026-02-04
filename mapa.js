@@ -227,7 +227,7 @@ function carregarDesenhosTemporario() {
 
                     layer = (layer instanceof L.FeatureGroup) ? layer.getLayers()[0] : layer;
 
-                    layer.info = { nome: desenho.nome, categoria: desenho.categoria, estado_ocupacao: desenho.estado_ocupacao, cor: cor, tipo_carga: desenho.tipo_carga, estado_barco: desenho.estado_barco, alerta: desenho.alerta };
+                    layer.info = { nome: desenho.nome, categoria: desenho.categoria, estado_ocupacao: desenho.estado_ocupacao, cor: cor, tipo_carga: desenho.tipo_carga, estado_barco: desenho.estado_barco, alerta: desenho.alerta, imo: desenho.imo, local: desenho.local, fundeadouro_id: desenho.fundeadouro_id };
                     layer.db_id = desenho.id;
 
                     // if (desenho.categoria === 'barco') {
@@ -382,7 +382,10 @@ map.on('draw:created', function(e) {
         estado_ocupacao,
         tipo_carga: tipo_carga || "",
         estado_barco,
-        alerta: null
+        alerta: null,
+        imo: null,
+        local: null,
+        fundeadouro_id: null
     };
 
     guardarDesenho(layer, type, desenhoData);
@@ -395,6 +398,9 @@ function atualizarPopup(layer) {
     let tipo_carga = layer.info?.tipo_carga || "Sem tipo de carga";
     let estado_barco = layer.info?.estado_barco || "Sem estado de barco";
     let alerta = layer.info?.alerta || null;
+    let imo = layer.info?.imo || null;
+    let local = layer.info?.local || null;
+    let fundeadouro_id = layer.info?.fundeadouro_id || null;
 
     let alertaHTML = '';
     if (filtroAtual.modo === 'alerta' && categoria === 'terminal' && alerta) {
@@ -453,17 +459,39 @@ function atualizarPopup(layer) {
         layer.bindPopup(conteudo);
 
     } else {
-        let conteudo = `
+
+        if (fundeadouro_id !== null) {
+            let conteudo = `
             <div class="popup-container">
                 <div class="popup-titulo">${nome}</div>
                 <div class="popup-categoria">Categoria: ${categoria}</div>
                 <div class="popup-estado">Estado: ${estado_barco}</div>
+                <div class="popup-imo">IMO: ${imo}</div>
+                <div class="popup-local">Local: ${local}</div>
+                <div class="popup-fundeadouro">Fundeadouro ID: ${fundeadouro_id}</div>
 
                 ${alertaHTML}
                 ${botoesHTML}
             </div>
         `;
         layer.bindPopup(conteudo);
+
+        } else {
+            let conteudo = `
+            <div class="popup-container">
+                <div class="popup-titulo">${nome}</div>
+                <div class="popup-categoria">Categoria: ${categoria}</div>
+                <div class="popup-estado">Estado: ${estado_barco}</div>
+                <div class="popup-imo">IMO: ${imo}</div>
+                <div class="popup-local">Local: ${local}</div>
+
+                ${alertaHTML}
+                ${botoesHTML}
+            </div>
+        `;
+        layer.bindPopup(conteudo);
+        }
+        
     }
 }
 
@@ -835,7 +863,10 @@ function carregarDesenhos() {
                         cor: cor,
                         tipo_carga: desenho.tipo_carga,
                         estado_barco: desenho.estado_barco,
-                        alerta: desenho.alerta || null
+                        alerta: desenho.alerta || null,
+                        imo: desenho.imo || null,
+                        local: desenho.local || null,
+                        fundeadouro_id: desenho.fundeadouro_id || null
                     };
                     layer.db_id = desenho.id;
 
@@ -921,7 +952,10 @@ function carregarDesenhosTodos() {
                         cor: '#808080',
                         tipo_carga: desenho.tipo_carga,
                         estado_barco: desenho.estado_barco,
-                        alerta: desenho.alerta || null
+                        alerta: desenho.alerta || null,
+                        imo: desenho.imo || null,
+                        local: desenho.local || null,
+                        fundeadouro_id: desenho.fundeadouro_id || null
                     };
                     layer.db_id = desenho.id;
 
@@ -996,7 +1030,10 @@ function carregarPorFiltroAtual() {
                     estado_ocupacao: desenho.estado_ocupacao,
                     tipo_carga: desenho.tipo_carga,
                     estado_barco: desenho.estado_barco,
-                    alerta: desenho.alerta || null
+                    alerta: desenho.alerta || null,
+                    imo: desenho.imo || null,
+                    local: desenho.local || null,
+                    fundeadouro_id: desenho.fundeadouro_id || null
                 };
 
                 layer.db_id = desenho.id;
