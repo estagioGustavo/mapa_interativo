@@ -96,23 +96,74 @@ body {
     font-size: 13px;
 }
 
-#legenda-itens li {
-    cursor: pointer;
+#legenda-itens.legenda-alertas {
+    display: block;
+    cursor: default; 
 }
 
-#legenda-itens li:hover {
-    background: rgba(0,0,0,0.05);
+#legenda-itens.legenda-alertas > li {
+    display: block;
+    cursor: default; 
+}
+
+#legenda-itens.legenda-alertas .legenda-sublista {
+    display: block;
+    margin: 6px 0 0 22px;
+    padding: 0;
+    font-size: 12px;
+    cursor: default; 
+}
+
+#legenda-itens.legenda-alertas .legenda-sublista li {
+    display: list-item;
+    list-style: disc;
+    cursor: default; 
+}
+
+.legenda-alerta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#legenda-itens {
+    display: block;
+    cursor: default;
+    padding: 0;
+    margin: 0;
+}
+
+#legenda-itens > li {
+    display: block;
+    cursor: default;
+    margin: 4px 0;
+}
+
+.legenda-cor-container, .legenda-alerta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.legenda-cor-container .legenda-cor,
+.legenda-alerta .legenda-cor {
+    width: 14px;
+    height: 14px;
+    border-radius: 2px; 
 }
 
 .legenda-sublista {
-    margin: 5px 0 0 20px;
+    display: block;
+    margin: 6px 0 0 22px;
     padding: 0;
     font-size: 12px;
+    cursor: default;
 }
 
 .legenda-sublista li {
+    display: list-item;
     list-style: disc;
-    cursor: pointer;
+    cursor: default;
 }
 
 

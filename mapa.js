@@ -21,7 +21,7 @@ const coresTipoCarga = {
 
 const coresBarcos = {
     'atracado': '#0dd417',
-    'saida': '#808080',
+    'saida': '#FFA500',
     'manobra': '#d62728',
     'fundeado': '#096a98',
 }
@@ -500,14 +500,14 @@ function editarInfo(id) {
             "Atualize o estado de ocupação (normal/atencao/critico/indisponivel):",
             layer.info.estado_ocupacao || 'normal'
         );
-        if (novoEstado === null) { layer.closePopup(); return; } // cancelar
+        if (novoEstado === null) { layer.closePopup(); return; } 
 
         while (!estadosValidos.includes(novoEstado)) {
             novoEstado = prompt(
                 `Estado inválido! Escolha um válido: ${estadosValidos.join(', ')}`,
                 layer.info.estado_ocupacao || 'normal'
             );
-            if (novoEstado === null) { layer.closePopup(); return; } // cancelar
+            if (novoEstado === null) { layer.closePopup(); return; } 
         }
         layer.info.estado_ocupacao = novoEstado;
 
@@ -517,14 +517,14 @@ function editarInfo(id) {
             "Atualize o estado de ocupação (normal/atencao/critico/indisponivel):",
             layer.info.estado_ocupacao || 'normal'
         );
-        if (novoEstado === null) { layer.closePopup(); return; } // cancelar
+        if (novoEstado === null) { layer.closePopup(); return; } 
 
         while (!estadosValidos.includes(novoEstado)) {
             novoEstado = prompt(
                 `Estado inválido! Escolha um válido: ${estadosValidos.join(', ')}`,
                 layer.info.estado_ocupacao || 'normal'
             );
-            if (novoEstado === null) { layer.closePopup(); return; } // cancelar
+            if (novoEstado === null) { layer.closePopup(); return; } 
         }
         layer.info.estado_ocupacao = novoEstado;
 
@@ -537,14 +537,14 @@ function editarInfo(id) {
             "Atualize o tipo de carga:",
             layer.info.tipo_carga || ''
         );
-        if (novoTipoCarga === null) { layer.closePopup(); return; } // cancelar
+        if (novoTipoCarga === null) { layer.closePopup(); return; } 
 
         while (!tiposValidos.includes(novoTipoCarga)) {
             novoTipoCarga = prompt(
                 `Tipo de carga inválido! Escolha um válido: ${tiposValidos.join(', ')}`,
                 layer.info.tipo_carga || ''
             );
-            if (novoTipoCarga === null) { layer.closePopup(); return; } // cancelar
+            if (novoTipoCarga === null) { layer.closePopup(); return; } 
         }
         layer.info.tipo_carga = novoTipoCarga;
 
@@ -554,14 +554,14 @@ function editarInfo(id) {
             "Atualize o estado do navio (atracado/saida/manobra/fundeado):",
             layer.info.estado_barco || ''
         );
-        if (novoEstadoBarco === null) { layer.closePopup(); return; } // cancelar
+        if (novoEstadoBarco === null) { layer.closePopup(); return; } 
 
         while (!estadoBarcoValidos.includes(novoEstadoBarco)) {
             novoEstadoBarco = prompt(
                 `Estado inválido! Escolha um válido: ${estadoBarcoValidos.join(', ')}`,
                 layer.info.estado_barco || ''
             );
-            if (novoEstadoBarco === null) { layer.closePopup(); return; } // cancelar
+            if (novoEstadoBarco === null) { layer.closePopup(); return; } 
         }
         layer.info.estado_barco = novoEstadoBarco;
     }
@@ -579,6 +579,80 @@ function editarInfo(id) {
     atualizarPopup(layer);
     layer.openPopup();
     atualizarDesenho(layer);
+}
+
+function obterTerminaisPorAlerta() {
+    const mapa = {};
+
+    drawnItems.eachLayer(layer => {
+        if (
+            layer.info?.categoria === 'terminal' &&
+            layer.info.alerta
+        ) {
+            if (!mapa[layer.info.alerta]) {
+                mapa[layer.info.alerta] = [];
+            }
+            mapa[layer.info.alerta].push({
+                nome: layer.info.nome,
+                layer
+            });
+        }
+    });
+
+    return mapa;
+}
+
+function carregarTerminaisParaAlertas() {
+    fetch(API_URL + '/categoria/terminal')
+        .then(res => res.json())
+        .then(data => {
+            if (data.status !== 'sucesso') return;
+
+            let bounds = L.latLngBounds();
+
+            data.dados.forEach(desenho => {
+                let layer;
+
+                let geojsonObj = typeof desenho.geojson === 'string'
+                    ? JSON.parse(desenho.geojson)
+                    : desenho.geojson;
+
+                if (desenho.tipo === 'circle') {
+                    const coords = geojsonObj.geometry.coordinates;
+                    const raio = geojsonObj.properties?.radius || 100;
+                    layer = L.circle([coords[1], coords[0]], { radius: raio });
+                } else {
+                    layer = L.geoJSON(geojsonObj);
+                }
+
+                layer = (layer instanceof L.FeatureGroup)
+                    ? layer.getLayers()[0]
+                    : layer;
+
+                layer.info = {
+                    nome: desenho.nome,
+                    categoria: desenho.categoria,
+                    estado_ocupacao: desenho.estado_ocupacao,
+                    tipo_carga: desenho.tipo_carga,
+                    alerta: desenho.alerta || null
+                };
+
+                layer.db_id = desenho.id;
+
+                atualizarCorAlerta(layer);
+                adicionarIconeAlerta(layer);
+
+                atualizarPopup(layer);
+                drawnItems.addLayer(layer);
+
+                if (layer.getBounds) bounds.extend(layer.getBounds());
+                else if (layer.getLatLng) bounds.extend(layer.getLatLng());
+            });
+
+            if (bounds.isValid()) map.fitBounds(bounds);
+
+            atualizarLegenda();
+        });
 }
 
 
@@ -881,6 +955,11 @@ carregarDesenhosTodos();
 function carregarPorFiltroAtual() {
     drawnItems.clearLayers();
 
+    if (filtroAtual.modo === 'alerta'){
+        carregarTerminaisParaAlertas();
+        return;
+    }
+
     if (filtroAtual.categoria === 'todos') {
         carregarDesenhosTodos();
         return;
@@ -946,25 +1025,30 @@ function carregarPorFiltroAtual() {
 
             if (bounds.isValid()) map.fitBounds(bounds);
         });
+
+        atualizarLegenda();
+
 }
 
 function atualizarLegenda() {
     const titulo = document.getElementById('legenda-titulo');
     const lista = document.getElementById('legenda-itens');
     lista.innerHTML = '';
-
-    //var filtroAtual = { categoria: '', modo: '' };
+    lista.classList.remove('legenda-alertas');
 
     if (filtroAtual.categoria === 'fundeadouro' || filtroAtual.modo === 'estado') {
         titulo.textContent = "Estado de Ocupação";
 
         Object.entries(coresEstado).forEach(([estado, cor]) => {
             const li = document.createElement('li');
-            li.innerHTML = `<div class="legenda-cor" style="background-color: ${cor}"></div> ${estado}`;
-
+            li.innerHTML = `
+                <div class="legenda-alerta">
+                    <div class="legenda-cor" style="background-color: ${cor}"></div>
+                    ${estado}
+                </div>
+            `;
             li.onmouseenter = () => highlightEstado(estado);
             li.onmouseleave = () => resetHighlightEstado();
-
             lista.appendChild(li);
         });
 
@@ -973,44 +1057,58 @@ function atualizarLegenda() {
 
         Object.entries(coresTipoCarga).forEach(([tipo, cor]) => {
             const li = document.createElement('li');
-            li.innerHTML = `<div class="legenda-cor" style="background-color: ${cor}"></div> ${tipo.replace(/_/g,' ').replace(/\//g,' / ')}`;
-
+            li.innerHTML = `
+                <div class="legenda-alerta">
+                    <div class="legenda-cor" style="background-color: ${cor}"></div>
+                    ${tipo.replace(/_/g,' ').replace(/\//g,' / ')}
+                </div>
+            `;
             li.onmouseenter = () => highlightCarga(tipo);
             li.onmouseleave = () => resetHighlightCarga();
-
             lista.appendChild(li);
         });
+
     } else if (filtroAtual.categoria === 'navio') {
         titulo.textContent = "Estado do Navio";
 
         Object.entries(coresBarcos).forEach(([estado, cor]) => {
             const li = document.createElement('li');
-            li.innerHTML = `<div class="legenda-cor" style="background-color: ${cor}"></div> ${estado}`;
-
+            li.innerHTML = `
+                <div class="legenda-alerta">
+                    <div class="legenda-cor" style="background-color: ${cor}"></div>
+                    ${estado}
+                </div>
+            `;
             li.onmouseenter = () => highlightBarco(estado);
             li.onmouseleave = () => resetHighlightBarco();
-
             lista.appendChild(li);
         });
+
     } else if (filtroAtual.modo === 'alerta') {
-    titulo.textContent = "Alertas";
+        titulo.textContent = "Alertas";
+        lista.classList.add('legenda-alertas');
 
-    Object.entries(coresAlerta).forEach(([alerta, cor]) => {
-        const li = document.createElement('li');
+        const terminaisPorAlerta = obterTerminaisPorAlerta();
 
-        li.innerHTML = `
-            <div class="legenda-cor" style="background-color:${cor}"></div>
-            ${formatarAlerta(alerta)}
-        `;
+        Object.entries(coresAlerta).forEach(([alerta, cor]) => {
+            if (!terminaisPorAlerta[alerta]) return;
 
-        li.onmouseenter = () => highlightAlerta(alerta);
-        li.onmouseleave = () => resetHighlightAlerta();
-
-        lista.appendChild(li);
-    });
+            const li = document.createElement('li');
+            li.innerHTML = `
+                <div class="legenda-alerta">
+                    <div class="legenda-cor" style="background-color:${cor}"></div>
+                    <strong>${formatarAlerta(alerta)}</strong>
+                </div>
+                <ul class="legenda-sublista">
+                    ${terminaisPorAlerta[alerta].map(t => `<li>${t.nome}</li>`).join('')}
+                </ul>
+            `;
+            li.onmouseenter = () => highlightAlerta(alerta);
+            li.onmouseleave = resetHighlightAlerta;
+            lista.appendChild(li);
+        });
     } else {
         titulo.textContent = "";
-        lista.innerHTML = '';
     }
 }
 
@@ -1200,45 +1298,45 @@ btnTodos.onclick = () => {
     filtroAtual = { categoria: 'todos' };
     carregarPorFiltroAtual();
     setActiveButton(btnTodos);
-    atualizarLegenda();
+    // atualizarLegenda();
 };
 
 btnFundeadores.onclick = () => {
     filtroAtual = { categoria: 'fundeadouro', modo: 'estado' };
     carregarPorFiltroAtual();
     setActiveButton(btnFundeadores);
-    atualizarLegenda();
+    // atualizarLegenda();
 };
 
 btnTerminais.onclick = () => {
     filtroAtual = { categoria: 'terminal', modo: 'estado' };
     carregarPorFiltroAtual();
     setActiveButton(btnTerminais);
-    atualizarLegenda();
+    // atualizarLegenda();
 };
 
 btnTerminaisCarga.onclick = () => {
     filtroAtual = { categoria: 'terminal', modo: 'carga' };
     carregarPorFiltroAtual();
     setActiveButton(btnTerminaisCarga);
-    atualizarLegenda();
+    // atualizarLegenda();
 };
 
 btnBarcos.onclick = () => {
     filtroAtual = { categoria: 'navio'};
     carregarPorFiltroAtual();
     setActiveButton(btnBarcos);
-    atualizarLegenda();
+    // atualizarLegenda();
 }
 
 btnAlertas.onclick = () => {
     filtroAtual = { categoria: 'terminal', modo: 'alerta' };
     carregarPorFiltroAtual();
     setActiveButton(btnAlertas);
-    atualizarLegenda();
+    // atualizarLegenda();
 }
 
-atualizarLegenda();
+// atualizarLegenda();
 
 
 // function carregarCores() {
