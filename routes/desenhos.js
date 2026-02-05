@@ -79,7 +79,8 @@ router.get('/fundeadouros-navios', async (req, res) => {
         n.geojson         AS navio_geojson,
         n.estado_barco    AS navio_estado,
         n.imo             AS navio_imo,
-        n.local           AS navio_local
+        n.local           AS navio_local,
+        n.estado_navio_fundeado AS navio_estado_fundeado
       FROM desenhos f
       LEFT JOIN desenhos n
         ON n.fundeadouro_id = f.id
@@ -116,6 +117,7 @@ router.get('/fundeadouros-navios', async (req, res) => {
           estado_barco: r.navio_estado,
           imo: r.navio_imo,
           local: r.navio_local,
+          estado_navio_fundeado: r.navio_estado_fundeado,
           geojson: JSON.parse(r.navio_geojson)
         });
       }

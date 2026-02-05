@@ -42,6 +42,11 @@ const alertaIcons = {
     // default: L.icon({ iconUrl: 'public/arq/icons/default_alert.png', iconSize: [25, 25] }) // fallback
 };
 
+const coresNavioFundeado = {
+  pendente: '#FF9800',
+  chegada_iminente: '#39af15',
+  bloqueio: '#F44336'
+};
 
 
 let filtroAtual = {
@@ -195,8 +200,6 @@ function formatarAlerta(alerta) {
 
     return textos[alerta] || alerta;
 }
-
-
 
 
 function carregarDesenhosTemporario() {
@@ -401,7 +404,10 @@ function atualizarPopup(layer) {
     let imo = layer.info?.imo || null;
     let local = layer.info?.local || null;
     let fundeadouro_id = layer.info?.fundeadouro_id || null;
+    let total_navios = layer.info?.total_navios ?? 0;
+    let resumo_navios = layer.info?.resumo_navios || {};
 
+    /* ---------- ALERTA ---------- */
     let alertaHTML = '';
     if (filtroAtual.modo === 'alerta' && categoria === 'terminal' && alerta) {
         alertaHTML = `
@@ -411,89 +417,126 @@ function atualizarPopup(layer) {
         `;
     }
 
-    let mostrarBotoes = !(filtroAtual.modo === 'alerta' && alerta);
-    let botoesHTML = '';
+    /* ---------- BOTÕES ---------- */
+    let mostrarBotoes = true;
 
-    if (mostrarBotoes) {
-        botoesHTML = `
+    if (filtroAtual.categoria === 'fundeadouro' && categoria === 'navio' && fundeadouro_id) {
+        mostrarBotoes = false;
+    }
+    if (filtroAtual.modo === 'alerta' && categoria === 'terminal' && alerta) {
+        mostrarBotoes = false;
+    }
+    if (filtroAtual.categoria === 'todos') {
+        mostrarBotoes = false;
+    }
+
+    let botoesHTML = mostrarBotoes
+        ? `
             <div class="popup-botoes">
                 <button class="popup-btn popup-btn-editar"
                     onclick="editarInfo('${layer._leaflet_id}')">Editar</button>
                 <button class="popup-btn popup-btn-apagar"
                     onclick="apagarDesenho('${layer._leaflet_id}')">Apagar</button>
             </div>
-        `;
-    } else {
-        botoesHTML = `
+        `
+        : `
             <div class="popup-info">
-                Ações desativadas durante alerta
+                Ações desativadas
             </div>
         `;
-    }
 
+    /* ---------- CONTEÚDO BASE ---------- */
+    let conteudo = `
+        <div class="popup-container">
+            <div class="popup-titulo">${nome}</div>
+            <div class="popup-categoria">Categoria: ${categoria}</div>
+    `;
+
+    /* ---------- FUNDEADOURO ---------- */
     if (categoria === 'fundeadouro') {
-        let conteudo = `
-            <div class="popup-container">
-                <div class="popup-titulo">${nome}</div>
-                <div class="popup-categoria">Categoria: ${categoria}</div>
-                <div class="popup-estado">Estado: ${estado}</div>
 
-                ${alertaHTML}
-                ${botoesHTML}
-            </div>
+        const listaResumo = Object.entries(resumo_navios)
+            .filter(([_, qtd]) => qtd > 0)
+            .map(([estadoNavio, qtd]) => `
+                <li style="color:${coresNavioFundeado[estadoNavio]}">
+                    ${qtd} ${estadoNavio.replace('_', ' ')}
+                </li>
+            `)
+            .join('');
+
+        conteudo += `
+            <div class="popup-estado">Estado: ${estado}</div>
+
+            ${
+                filtroAtual.categoria !== 'todos'
+                    ? `<div class="popup-info">
+                        Navios fundeados: <strong> 🛥️ ${total_navios}</strong>
+                       </div>`
+                    : ''
+            }
+
+            ${
+                listaResumo && filtroAtual.categoria !== 'todos'
+                    ? `<ul class="popup-lista-navios">${listaResumo}</ul>`
+                    : ''
+            }
         `;
-        layer.bindPopup(conteudo);
-
-    } else if (categoria === 'terminal') {
-        let conteudo = `
-            <div class="popup-container">
-                <div class="popup-titulo">${nome}</div>
-                <div class="popup-categoria">Categoria: ${categoria}</div>
-                <div class="popup-estado">Estado: ${estado}</div>
-                <div class="popup-tipo-carga">Tipo de carga: ${tipo_carga}</div>
-
-                ${alertaHTML}
-                ${botoesHTML}
-            </div>
-        `;
-        layer.bindPopup(conteudo);
-
-    } else {
-
-        if (fundeadouro_id !== null) {
-            let conteudo = `
-            <div class="popup-container">
-                <div class="popup-titulo">${nome}</div>
-                <div class="popup-categoria">Categoria: ${categoria}</div>
-                <div class="popup-estado">Estado: ${estado_barco}</div>
-                <div class="popup-imo">IMO: ${imo}</div>
-                <div class="popup-local">Local: ${local}</div>
-                <div class="popup-fundeadouro">Fundeadouro ID: ${fundeadouro_id}</div>
-
-                ${alertaHTML}
-                ${botoesHTML}
-            </div>
-        `;
-        layer.bindPopup(conteudo);
-
-        } else {
-            let conteudo = `
-            <div class="popup-container">
-                <div class="popup-titulo">${nome}</div>
-                <div class="popup-categoria">Categoria: ${categoria}</div>
-                <div class="popup-estado">Estado: ${estado_barco}</div>
-                <div class="popup-imo">IMO: ${imo}</div>
-                <div class="popup-local">Local: ${local}</div>
-
-                ${alertaHTML}
-                ${botoesHTML}
-            </div>
-        `;
-        layer.bindPopup(conteudo);
-        }
-        
     }
+
+    /* ---------- TERMINAL ---------- */
+    else if (categoria === 'terminal') {
+        conteudo += `
+            <div class="popup-estado">Estado: ${estado}</div>
+            <div class="popup-tipo-carga">Tipo de carga: ${tipo_carga}</div>
+        `;
+    }
+
+    /* ---------- NAVIO ---------- */
+    else if (categoria === 'navio') {
+        conteudo += `
+            <div class="popup-estado">Estado: ${estado_barco}</div>
+            <div class="popup-imo">IMO: ${imo}</div>
+            <div class="popup-local">Local: ${local}</div>
+        `;
+
+        // Só mostrar fundeadouro se NÃO estivermos na aba "navios"
+        if (fundeadouro_id !== null && filtroAtual.categoria !== 'navio') {
+            const estadoFundeado = layer.info?.estado_navio_fundeado || 'pendente';
+
+            conteudo += `
+                <div class="popup-fundeadouro">
+                    Fundeadouro ID: ${fundeadouro_id}
+                </div>
+
+                <div class="popup-info">
+                    Estado no fundeadouro:
+                    <strong style="color:${coresNavioFundeado[estadoFundeado]}">
+                        ${estadoFundeado.replace('_', ' ')}
+                    </strong>
+                </div>
+            `;
+        } else if (fundeadouro_id !== null) {
+            // Só mostrar o Fundeadouro ID sem o estado
+            conteudo += `
+                <div class="popup-fundeadouro">
+                    Fundeadouro ID: ${fundeadouro_id}
+                </div>
+            `;
+        }
+    }
+
+    /* ---------- FECHO ---------- */
+    conteudo += `
+        ${alertaHTML}
+        ${botoesHTML}
+        </div>
+    `;
+
+    layer.bindPopup(conteudo);
 }
+
+
+
 
 
 
@@ -681,6 +724,109 @@ function carregarTerminaisParaAlertas() {
 
             atualizarLegenda();
         });
+}
+
+function carregarFundeadourosComNavios() {
+    drawnItems.clearLayers();
+
+    fetch(API_URL + '/fundeadouros-navios')
+        .then(res => res.json())
+        .then(data => {
+            if (data.status !== 'sucesso') return;
+
+            let bounds = L.latLngBounds();
+
+            data.dados.forEach(fund => {
+                let fundLayer;
+
+                // Criar layer do fundeadouro
+                if (fund.tipo === 'circle') {
+                    const coords = fund.geojson.geometry.coordinates;
+                    const raio = fund.geojson.properties?.radius || 100;
+                    fundLayer = L.circle([coords[1], coords[0]], { radius: raio });
+                } else {
+                    fundLayer = L.geoJSON(fund.geojson);
+                }
+
+                fundLayer = (fundLayer instanceof L.FeatureGroup) ? fundLayer.getLayers()[0] : fundLayer;
+
+                // Inicializar resumo de navios fundeados
+                const resumo = {
+                    bloqueio: 0,
+                    chegada_iminente: 0,
+                    pendente: 0
+                };
+
+                // Contar estados de navios fundeados
+                fund.navios.forEach(navio => {
+                    if (resumo[navio.estado_navio_fundeado] !== undefined) {
+                        resumo[navio.estado_navio_fundeado]++;
+                    }
+                });
+
+                // Info do fundeadouro
+                fundLayer.info = {
+                    nome: fund.nome,
+                    categoria: 'fundeadouro',
+                    estado_ocupacao: fund.estado_ocupacao,
+                    total_navios: fund.navios.length,
+                    resumo_navios: resumo
+                };
+
+                fundLayer.db_id = fund.id;
+
+                atualizarCorPorEstado(fundLayer);
+                atualizarPopup(fundLayer);
+                drawnItems.addLayer(fundLayer);
+
+                if (fundLayer.getBounds) bounds.extend(fundLayer.getBounds());
+                else if (fundLayer.getLatLng) bounds.extend(fundLayer.getLatLng());
+
+                // Criar layers para navios fundeados
+                fund.navios.forEach(navio => {
+                    let navioLayer;
+
+                    const geojsonOptions = {
+                        style: {
+                            color: '#4bcafc',
+                            fillColor: '#4bcafc',
+                            fillOpacity: 0.4,
+                            weight: 2
+                        },
+                        interactive: true
+                    };
+
+                    if (navio.tipo === 'circle') {
+                        const coords = navio.geojson.geometry.coordinates;
+                        const raio = navio.geojson.properties?.radius || 50;
+                        navioLayer = L.circle([coords[1], coords[0]], { radius: raio });
+                    } else {
+                        navioLayer = L.geoJSON(navio.geojson, geojsonOptions);
+                    }
+
+                    navioLayer = (navioLayer instanceof L.FeatureGroup) ? navioLayer.getLayers()[0] : navioLayer;
+
+                    navioLayer.info = {
+                        nome: navio.nome,
+                        categoria: 'navio',
+                        estado_barco: 'fundeado',
+                        fundeadouro_id: fund.id,
+                        imo: navio.imo,
+                        local: navio.local,
+                        estado_navio_fundeado: navio.estado_navio_fundeado
+                    };
+
+                    atualizarPopup(navioLayer);
+                    drawnItems.addLayer(navioLayer);
+
+                    if (navioLayer.getBounds) bounds.extend(navioLayer.getBounds());
+                    else if (navioLayer.getLatLng) bounds.extend(navioLayer.getLatLng());
+                });
+            });
+
+            if (bounds.isValid()) map.fitBounds(bounds);
+        })
+        .catch(err => console.error('❌ Erro ao carregar fundeadouros com navios:', err));
 }
 
 
@@ -996,6 +1142,13 @@ function carregarPorFiltroAtual() {
 
     if (filtroAtual.categoria === 'todos') {
         carregarDesenhosTodos();
+        atualizarLegenda();
+        return;
+    }
+
+    if (filtroAtual.categoria === 'fundeadouro') {
+        carregarFundeadourosComNavios();
+        atualizarLegenda();
         return;
     }
 
@@ -1196,6 +1349,9 @@ function resetHighlightAlerta() {
 }
 
 function highlightEstado(estadoSelecionado) {
+
+    if (filtroAtual.categoria === 'todos') return;
+
     drawnItems.eachLayer(layer => {
         if (!layer.info) return;
 
@@ -1226,6 +1382,10 @@ function resetHighlightEstado() {
             fillOpacity: filtroAtual.modo === 'estado' ? 0.25 : 0.1,
             weight: 3
         });
+
+        if (filtroAtual.categoria === 'fundeadouro' && layer.info.categoria === 'navio') {
+        return;
+        }
 
         if (filtroAtual.modo === 'alerta') {
             atualizarCorAlerta(layer);
@@ -1283,6 +1443,9 @@ function resetHighlightCarga() {
 }
 
 function highlightBarco(estadoSelecionado) {
+
+    if (filtroAtual.categoria === 'fundeadouro') return;
+
     drawnItems.eachLayer(layer => {
         if (!layer.info || layer.info.categoria !== 'navio') return;
 
@@ -1302,6 +1465,9 @@ function highlightBarco(estadoSelecionado) {
 }
 
 function resetHighlightBarco() {
+
+    if (filtroAtual.categoria === 'fundeadouro') return;
+
     drawnItems.eachLayer(layer => {
         if (!layer.info || layer.info.categoria !== 'navio') return;
         if (!layer.setStyle) return;
